@@ -98,10 +98,12 @@ const DisponibilidadPage = () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Add new disponibilidad
+      // Add new disponibilidad - Fixed the type error by ensuring all properties are required
       const newDisponibilidad: DisponibilidadItem = {
         id: Math.random().toString(36).substr(2, 9),
-        ...data
+        diaSemana: data.diaSemana,
+        horaInicio: data.horaInicio,
+        horaFin: data.horaFin
       };
       
       setDisponibilidades(prev => [...prev, newDisponibilidad]);
