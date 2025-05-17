@@ -141,7 +141,6 @@ const DisponibilidadDocentesPage = () => {
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       className="w-full"
-                      icon={<Search className="h-4 w-4" />}
                     />
                   </div>
                 </div>

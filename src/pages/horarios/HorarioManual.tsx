@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar, CalendarIcon, Clock, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -63,8 +63,9 @@ const diasSemana = [
   { id: 'Sábado', label: 'Sábado' },
 ];
 
+// Generate hours from 7:00 to 22:00 in 30-minute intervals
 const horasDisponibles = Array.from({ length: 32 }, (_, i) => {
-  const hora = Math.floor(i / 2) + 7; // Empieza a las 7:00
+  const hora = Math.floor(i / 2) + 7; // Starts at 7:00
   const minutos = i % 2 === 0 ? '00' : '30';
   return {
     id: `${hora.toString().padStart(2, '0')}:${minutos}`,
@@ -72,8 +73,15 @@ const horasDisponibles = Array.from({ length: 32 }, (_, i) => {
   };
 });
 
+// Generate time slots for the calendar
+const timeSlots = Array.from({ length: 30 }, (_, i) => {
+  const hora = Math.floor(i / 2) + 7; // Starts at 7:00
+  const minutos = i % 2 === 0 ? '00' : '30';
+  return `${hora.toString().padStart(2, '0')}:${minutos}`;
+});
+
 const HorarioManualPage = () => {
-  // Estado para los datos
+  // State for data
   const [horarios, setHorarios] = useState<Horario[]>([
     { 
       id: 1, 
@@ -127,12 +135,14 @@ const HorarioManualPage = () => {
     },
   ]);
   
-  // Estado para controlar el formulario
+  // Form state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  // Configuración del formulario
+  // Form setup
   const form = useForm<FormValues>({
     resolver: zodResolver(horarioSchema),
     defaultValues: {
@@ -145,16 +155,16 @@ const HorarioManualPage = () => {
       grupo: '',
     },
   });
-
-  // Manejadores
-  const handleAdd = () => {
+  
+  // Handlers
+  const handleAdd = (dia: string = 'Lunes', horaInicio: string = '08:00') => {
     setEditingId(null);
     form.reset({
       curso: '',
       docente: '',
       aula: '',
-      dia: 'Lunes',
-      horaInicio: '',
+      dia,
+      horaInicio,
       horaFin: '',
       grupo: '',
     });
@@ -180,6 +190,12 @@ const HorarioManualPage = () => {
     toast.success(`Horario eliminado`);
   };
 
+  const handleCellClick = (dia: string, hora: string) => {
+    setSelectedDay(dia);
+    setSelectedTime(hora);
+    handleAdd(dia, hora);
+  };
+
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     
@@ -188,15 +204,15 @@ const HorarioManualPage = () => {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       if (editingId) {
-        // Actualizar existente
+        // Update existing
         setHorarios(horarios.map(item => 
           item.id === editingId ? { ...data, id: editingId } as Horario : item
         ));
         toast.success(`Horario actualizado`);
       } else {
-        // Crear nuevo
+        // Create new
         const newItem: Horario = {
-          ...data as Horario, // This cast ensures all required fields are present
+          ...data as Horario,
           id: Math.max(0, ...horarios.map(h => h.id)) + 1,
         };
         setHorarios([...horarios, newItem]);
@@ -212,16 +228,45 @@ const HorarioManualPage = () => {
     }
   };
 
-  // Datos de ejemplo para los selectores
+  // Sample data for form selects
   const cursos = ['Algoritmos y Estructuras de Datos', 'Bases de Datos', 'Programación Web', 'Inteligencia Artificial', 'Bases de Datos Avanzadas'];
   const docentes = ['Juan Pérez', 'María Gómez', 'Carlos López', 'Ana Rodríguez'];
   const aulas = ['A101', 'A102', 'L201', 'L202', 'T301'];
 
-  // Group horarios por día para la vista de calendario
-  const horariosPorDia: Record<string, Horario[]> = {};
-  diasSemana.forEach(dia => {
-    horariosPorDia[dia.id] = horarios.filter(h => h.dia === dia.id);
-  });
+  // Calculate the position and height of each class block
+  const getClassBlockStyle = (horario: Horario) => {
+    const startIndex = timeSlots.findIndex(time => time === horario.horaInicio);
+    const endIndex = timeSlots.findIndex(time => time === horario.horaFin);
+    
+    if (startIndex === -1 || endIndex === -1) return {};
+    
+    const height = (endIndex - startIndex) * 48; // 48px per 30-minute slot
+    const top = startIndex * 48;
+    
+    return {
+      height: `${height}px`,
+      top: `${top}px`,
+    };
+  };
+
+  // Get a nice color based on the course name (for visual separation)
+  const getClassColor = (curso: string) => {
+    const colors = [
+      'bg-blue-100 border-blue-300 text-blue-800',
+      'bg-green-100 border-green-300 text-green-800',
+      'bg-yellow-100 border-yellow-300 text-yellow-800',
+      'bg-purple-100 border-purple-300 text-purple-800',
+      'bg-pink-100 border-pink-300 text-pink-800',
+    ];
+    
+    // Simple hash function to consistently assign colors
+    let hash = 0;
+    for (let i = 0; i < curso.length; i++) {
+      hash = curso.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    return colors[Math.abs(hash) % colors.length];
+  };
 
   return (
     <div className="container mx-auto">
@@ -231,7 +276,7 @@ const HorarioManualPage = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mb-6">
             <div>
               <h2 className="text-3xl font-bold mb-2">Horarios Académicos</h2>
               <p className="text-muted-foreground">
@@ -240,8 +285,8 @@ const HorarioManualPage = () => {
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button onClick={handleAdd}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />
+                <Button onClick={() => handleAdd()}>
+                  <Plus className="mr-2 h-4 w-4" />
                   Agregar Horario
                 </Button>
               </DialogTrigger>
@@ -376,9 +421,11 @@ const HorarioManualPage = () => {
                                   <SelectValue placeholder="Hora fin" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {horasDisponibles.map(hora => (
-                                    <SelectItem key={hora.id} value={hora.id}>{hora.label}</SelectItem>
-                                  ))}
+                                  {horasDisponibles
+                                    .filter(hora => hora.id > form.getValues("horaInicio"))
+                                    .map(hora => (
+                                      <SelectItem key={hora.id} value={hora.id}>{hora.label}</SelectItem>
+                                    ))}
                                 </SelectContent>
                               </Select>
                             </FormControl>
@@ -447,100 +494,92 @@ const HorarioManualPage = () => {
           </div>
         </motion.div>
         
-        <motion.div 
-          className="grid grid-cols-1 lg:grid-cols-6 gap-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
-        >
-          {diasSemana.map((dia, index) => (
-            <motion.div 
-              key={dia.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-              className="col-span-1"
-            >
-              <Card className="h-full">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">{dia.label}</CardTitle>
-                  <CardDescription>
-                    {horariosPorDia[dia.id]?.length || 0} {horariosPorDia[dia.id]?.length === 1 ? 'clase' : 'clases'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {horariosPorDia[dia.id] && horariosPorDia[dia.id].length > 0 ? (
-                      horariosPorDia[dia.id].map(horario => (
-                        <Card key={horario.id} className="p-3 border-l-4 border-l-primary bg-muted/30">
-                          <div className="font-medium text-sm">{horario.curso}</div>
-                          <div className="text-xs text-muted-foreground flex justify-between mt-1">
-                            <span>{horario.horaInicio} - {horario.horaFin}</span>
-                            <span>Grupo {horario.grupo}</span>
-                          </div>
-                          <div className="text-xs mt-1">{horario.docente}</div>
-                          <div className="text-xs text-muted-foreground mt-1">Aula {horario.aula}</div>
-                          <div className="flex gap-2 mt-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-7 w-7 p-0" 
-                              onClick={() => handleEdit(horario)}
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                                <path d="m15 5 4 4" />
-                              </svg>
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-7 w-7 p-0 text-destructive hover:text-destructive/90 hover:bg-destructive/10" 
-                              onClick={() => handleDelete(horario)}
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <path d="M3 6h18" />
-                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                                <line x1="10" x2="10" y1="11" y2="17" />
-                                <line x1="14" x2="14" y1="11" y2="17" />
-                              </svg>
-                            </Button>
-                          </div>
-                        </Card>
-                      ))
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-4 text-center text-muted-foreground">
-                        <CalendarIcon className="h-8 w-8 mb-2" />
-                        <p className="text-sm">No hay clases programadas</p>
-                      </div>
-                    )}
+        <Card>
+          <CardContent className="p-4">
+            {/* Calendar header */}
+            <div className="grid grid-cols-7 mb-2">
+              <div className="col-span-1 text-center font-medium text-muted-foreground">Hora</div>
+              {diasSemana.map(dia => (
+                <div key={dia.id} className="col-span-1 text-center font-medium">{dia.label}</div>
+              ))}
+            </div>
+
+            {/* Calendar body */}
+            <div className="grid grid-cols-7 border rounded-md overflow-hidden">
+              {/* Time slots column */}
+              <div className="col-span-1 bg-muted/30">
+                {timeSlots.map((time, index) => (
+                  <div 
+                    key={`time-${index}`} 
+                    className={`h-12 border-b flex items-center justify-center px-2 text-sm ${index % 2 === 0 ? 'bg-muted/10' : ''}`}
+                  >
+                    <span className="text-muted-foreground">{time}</span>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </motion.div>
+                ))}
+              </div>
+
+              {/* Days columns */}
+              {diasSemana.map(dia => (
+                <div key={`col-${dia.id}`} className="col-span-1 relative border-l">
+                  {/* Time slots for this day */}
+                  {timeSlots.map((time, index) => (
+                    <div 
+                      key={`slot-${dia.id}-${index}`}
+                      className={`h-12 border-b ${index % 2 === 0 ? 'bg-muted/10' : ''} hover:bg-muted/20 cursor-pointer`}
+                      onClick={() => handleCellClick(dia.id, time)}
+                    ></div>
+                  ))}
+
+                  {/* Class blocks */}
+                  {horarios
+                    .filter(h => h.dia === dia.id)
+                    .map(horario => (
+                      <div
+                        key={`class-${horario.id}`}
+                        className={`absolute left-0 right-0 rounded border-l-4 p-1 mx-1 overflow-hidden ${getClassColor(horario.curso)}`}
+                        style={getClassBlockStyle(horario)}
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <div className="text-xs font-bold truncate">{horario.curso}</div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 rounded-full p-0 hover:bg-background/20"
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              handleDelete(horario);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <div className="text-xs flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{horario.horaInicio} - {horario.horaFin}</span>
+                        </div>
+                        <div className="text-xs">Aula: {horario.aula}</div>
+                        <div className="text-xs truncate">Prof: {horario.docente}</div>
+                        <div className="text-xs">Grupo: {horario.grupo}</div>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs p-0 h-6 mt-1 hover:bg-background/20 w-full text-left"
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            handleEdit(horario);
+                          }}
+                        >
+                          Editar
+                        </Button>
+                      </div>
+                    ))
+                  }
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
