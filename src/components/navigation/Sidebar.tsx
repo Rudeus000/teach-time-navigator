@@ -38,8 +38,9 @@ const navItems: NavItem[] = [
   { icon: School, label: 'Aulas', href: '/aulas', roles: ['COORDINADOR'] },
   { icon: Calendar, label: 'Horarios', href: '/horarios', roles: ['COORDINADOR'] },
   { icon: CalendarClock, label: 'Generador de Horarios', href: '/generar-horarios', roles: ['COORDINADOR'] },
+  { icon: CalendarDays, label: 'Disponibilidad Docentes', href: '/disponibilidad-docentes', roles: ['COORDINADOR'] },
   { icon: UserCog, label: 'Perfil', href: '/perfil', roles: ['COORDINADOR', 'DOCENTE'] },
-  { icon: CalendarDays, label: 'Disponibilidad', href: '/disponibilidad', roles: ['COORDINADOR', 'DOCENTE'] },
+  { icon: CalendarDays, label: 'Mi Disponibilidad', href: '/disponibilidad', roles: ['COORDINADOR', 'DOCENTE'] },
 ];
 
 const Sidebar = ({ collapsed }: SidebarProps) => {

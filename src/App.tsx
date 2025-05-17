@@ -32,6 +32,7 @@ import CarreraPage from "@/pages/academica/Carrera";
 import CursoPage from "@/pages/academica/Curso";
 import DocentePage from "@/pages/docentes/Docente";
 import EspecialidadPage from "@/pages/docentes/Especialidad";
+import DisponibilidadDocentesPage from "@/pages/docentes/DisponibilidadDocentes";
 import AulaPage from "@/pages/aulas/Aula";
 import HorarioManualPage from "@/pages/horarios/HorarioManual";
 import GeneradorHorarioPage from "@/pages/horarios/GeneradorHorario";
@@ -67,6 +68,7 @@ const App = () => (
                   <Route path="/cursos" element={<CursoPage />} />
                   <Route path="/docentes" element={<DocentePage />} />
                   <Route path="/especialidades" element={<EspecialidadPage />} />
+                  <Route path="/disponibilidad-docentes" element={<DisponibilidadDocentesPage />} />
                   <Route path="/aulas" element={<AulaPage />} />
                   <Route path="/horarios" element={<HorarioManualPage />} />
                   <Route path="/generar-horarios" element={<GeneradorHorarioPage />} />

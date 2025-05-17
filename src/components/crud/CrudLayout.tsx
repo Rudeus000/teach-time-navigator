@@ -17,6 +17,7 @@ interface CrudProps<T> {
   renderForm: React.ReactNode;
   showForm: boolean;
   icon: React.ReactNode;
+  readOnly?: boolean;
 }
 
 export function CrudLayout<T extends { id: number | string }>({
@@ -29,7 +30,8 @@ export function CrudLayout<T extends { id: number | string }>({
   onDelete,
   renderForm,
   showForm,
-  icon
+  icon,
+  readOnly = false
 }: CrudProps<T>) {
   return (
     <motion.div
@@ -43,10 +45,12 @@ export function CrudLayout<T extends { id: number | string }>({
           <h2 className="text-3xl font-bold mb-2">{title}</h2>
           <p className="text-muted-foreground">{subtitle}</p>
         </div>
-        <Button onClick={onAdd} className="flex items-center gap-2">
-          <PlusCircle className="h-4 w-4" /> 
-          Agregar {title.slice(0, -1)}
-        </Button>
+        {!readOnly && (
+          <Button onClick={onAdd} className="flex items-center gap-2">
+            <PlusCircle className="h-4 w-4" /> 
+            Agregar {title.slice(0, -1)}
+          </Button>
+        )}
       </div>
 
       {showForm && (
@@ -65,7 +69,7 @@ export function CrudLayout<T extends { id: number | string }>({
                 {columns.map((column, index) => (
                   <TableHead key={index}>{column.header}</TableHead>
                 ))}
-                <TableHead>Acciones</TableHead>
+                {!readOnly && <TableHead>Acciones</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -78,24 +82,26 @@ export function CrudLayout<T extends { id: number | string }>({
                         : item[column.accessor] as React.ReactNode}
                     </TableCell>
                   ))}
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => onEdit(item)}
-                      >
-                        Editar
-                      </Button>
-                      <Button 
-                        variant="destructive" 
-                        size="sm" 
-                        onClick={() => onDelete(item)}
-                      >
-                        Eliminar
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {!readOnly && (
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => onEdit(item)}
+                        >
+                          Editar
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => onDelete(item)}
+                        >
+                          Eliminar
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -106,12 +112,14 @@ export function CrudLayout<T extends { id: number | string }>({
           {icon}
           <h3 className="text-xl font-medium mt-4 mb-2">No hay {title.toLowerCase()} registrados</h3>
           <p className="text-muted-foreground text-center max-w-md mb-6">
-            Agregue un nuevo registro utilizando el botón "Agregar {title.slice(0, -1)}".
+            {!readOnly ? `Agregue un nuevo registro utilizando el botón "Agregar ${title.slice(0, -1)}".` : `No hay ${title.toLowerCase()} disponibles para mostrar.`}
           </p>
-          <Button onClick={onAdd} className="flex items-center gap-2">
-            <PlusCircle className="h-4 w-4" /> 
-            Agregar {title.slice(0, -1)}
-          </Button>
+          {!readOnly && (
+            <Button onClick={onAdd} className="flex items-center gap-2">
+              <PlusCircle className="h-4 w-4" /> 
+              Agregar {title.slice(0, -1)}
+            </Button>
+          )}
         </div>
       )}
     </motion.div>

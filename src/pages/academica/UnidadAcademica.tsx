@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { Building2, Trash } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { motion } from 'framer-motion';
 
 import { CrudLayout } from '@/components/crud/CrudLayout';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ const UnidadAcademicaPage = () => {
   const [unidadesAcademicas, setUnidadesAcademicas] = useState<UnidadAcademica[]>([
     { id: 1, nombre: 'Facultad de Ingeniería', codigo: 'FI', descripcion: 'Facultad de ingeniería y ciencias' },
     { id: 2, nombre: 'Facultad de Economía', codigo: 'FE', descripcion: 'Facultad de economía y negocios' },
+    { id: 3, nombre: 'Facultad de Humanidades', codigo: 'FH', descripcion: 'Facultad de humanidades y ciencias sociales' },
   ]);
   
   // Estado para controlar el formulario
@@ -79,13 +81,20 @@ const UnidadAcademicaPage = () => {
     if (editingId) {
       // Actualizar existente
       setUnidadesAcademicas(unidadesAcademicas.map(item => 
-        item.id === editingId ? { ...data, id: editingId } as UnidadAcademica : item
+        item.id === editingId ? { 
+          id: editingId, 
+          nombre: data.nombre,
+          codigo: data.codigo,
+          descripcion: data.descripcion || ''
+        } : item
       ));
       toast.success(`Unidad académica actualizada`);
     } else {
       // Crear nuevo
       const newItem: UnidadAcademica = {
-        ...data,
+        nombre: data.nombre,
+        codigo: data.codigo,
+        descripcion: data.descripcion || '',
         id: Math.max(0, ...unidadesAcademicas.map(u => u.id)) + 1,
       };
       setUnidadesAcademicas([...unidadesAcademicas, newItem]);
@@ -98,9 +107,9 @@ const UnidadAcademicaPage = () => {
 
   // Columnas para la tabla
   const columns = [
-    { header: 'Código', accessor: 'codigo' },
-    { header: 'Nombre', accessor: 'nombre' },
-    { header: 'Descripción', accessor: 'descripcion' },
+    { header: 'Código', accessor: 'codigo' as keyof UnidadAcademica },
+    { header: 'Nombre', accessor: 'nombre' as keyof UnidadAcademica },
+    { header: 'Descripción', accessor: 'descripcion' as keyof UnidadAcademica },
   ];
 
   // Renderizado del formulario
