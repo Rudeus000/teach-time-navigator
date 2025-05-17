@@ -18,7 +18,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, role?: UserRole) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   isCoordinador: boolean;
@@ -65,11 +65,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, role?: UserRole) => {
     try {
       setLoading(true);
-      const response = await axios.post('/api/auth/login/', { email, password });
-      const { token, user: userData } = response.data;
+      
+      // En un entorno real, enviaríamos el correo y contraseña al backend
+      // En este caso, para el usuario de prueba, simulamos la respuesta
+      
+      // Simular respuesta del backend para usuarios de prueba
+      let mockResponse;
+      
+      if (role === 'COORDINADOR' && email === "coordinador@ejemplo.com" && password === "123456") {
+        mockResponse = {
+          token: "mock-coordinador-token",
+          user: {
+            id: 1,
+            email: "coordinador@ejemplo.com",
+            firstName: "Admin",
+            lastName: "Coordinador",
+            role: "COORDINADOR" as UserRole
+          }
+        };
+      } else if (role === 'DOCENTE' && email === "docente@ejemplo.com" && password === "123456") {
+        mockResponse = {
+          token: "mock-docente-token",
+          user: {
+            id: 2,
+            email: "docente@ejemplo.com",
+            firstName: "Usuario",
+            lastName: "Docente",
+            role: "DOCENTE" as UserRole
+          }
+        };
+      } else {
+        // Intento de autenticación real con el backend
+        const response = await axios.post('/api/auth/login/', { email, password, role });
+        mockResponse = response.data;
+      }
+      
+      if (!mockResponse) {
+        throw new Error('Credenciales inválidas');
+      }
+      
+      const { token, user: userData } = mockResponse;
       
       // Store token
       localStorage.setItem('token', token);

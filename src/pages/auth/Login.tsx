@@ -17,11 +17,32 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion } from 'framer-motion';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { UserRole } from '@/context/AuthContext';
+
+// Datos de usuario de prueba
+const sampleUsers = {
+  COORDINADOR: {
+    email: "coordinador@ejemplo.com",
+    password: "123456"
+  },
+  DOCENTE: {
+    email: "docente@ejemplo.com",
+    password: "123456"
+  }
+};
 
 // Form validation schema
 const formSchema = z.object({
   email: z.string().email('Correo electrónico inválido'),
   password: z.string().min(1, 'La contraseña es requerida'),
+  role: z.enum(['COORDINADOR', 'DOCENTE']),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -36,16 +57,23 @@ const LoginPage = () => {
     defaultValues: {
       email: '',
       password: '',
+      role: 'DOCENTE',
     },
   });
   
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
     try {
-      await login(data.email, data.password);
+      await login(data.email, data.password, data.role);
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  const fillSampleUser = (role: UserRole) => {
+    form.setValue('email', sampleUsers[role].email);
+    form.setValue('password', sampleUsers[role].password);
+    form.setValue('role', role);
   };
   
   return (
@@ -68,6 +96,30 @@ const LoginPage = () => {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Usuario</FormLabel>
+                    <FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccione su tipo de usuario" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="DOCENTE">Docente</SelectItem>
+                          <SelectItem value="COORDINADOR">Coordinador</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="email"
@@ -99,6 +151,28 @@ const LoginPage = () => {
               </Button>
             </form>
           </Form>
+          
+          <div className="mt-6">
+            <p className="text-center text-sm text-muted-foreground mb-2">Usuarios de prueba:</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => fillSampleUser('DOCENTE')}
+                className="text-xs"
+              >
+                Docente Demo
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => fillSampleUser('COORDINADOR')}
+                className="text-xs"
+              >
+                Coordinador Demo
+              </Button>
+            </div>
+          </div>
         </CardContent>
         <CardFooter className="flex justify-center text-xs text-muted-foreground">
           Sistema de Gestión de Horarios Académicos
