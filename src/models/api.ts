@@ -124,7 +124,7 @@ export interface DocenteEspecialidad {
   nombre_especialidad?: string;
 }
 
-// Grupo model
+// Grupo model to match Django backend
 export interface Grupo {
   grupo_id: number;
   codigo_grupo: string;
@@ -141,22 +141,22 @@ export interface Grupo {
   docenteObj?: Docente;
 }
 
-// BloquesHorariosDefinicion model
+// BloquesHorariosDefinicion model to match Django backend
 export interface BloqueHorario {
   bloque_def_id: number;
   nombre_bloque: string;
   hora_inicio: string;
   hora_fin: string;
   turno: 'M' | 'T' | 'N';
-  dia_semana?: number; // Optional in the model
+  dia_semana?: number; // Django uses 1-7 for Monday-Sunday
 }
 
-// DisponibilidadDocentes model
+// DisponibilidadDocentes model to match Django backend
 export interface DisponibilidadDocente {
   disponibilidad_id: number;
   docente: number;
   periodo: number;
-  dia_semana: number;
+  dia_semana: number; // Django uses 1-7 for Monday-Sunday
   bloque_horario: number;
   esta_disponible: boolean;
   preferencia: number; // 0=Neutral, 1=Preferred, -1=Not preferred
@@ -166,14 +166,14 @@ export interface DisponibilidadDocente {
   bloqueObj?: BloqueHorario;
 }
 
-// HorariosAsignados model
+// HorariosAsignados model to match Django backend
 export interface HorarioAsignado {
   horario_id: number;
   grupo: number;
   docente: number;
   espacio: number;
   periodo: number;
-  dia_semana: number;
+  dia_semana: number; // Django uses 1-7 for Monday-Sunday
   bloque_horario: number;
   estado: 'Programado' | 'Confirmado' | 'Cancelado';
   observaciones?: string;
