@@ -1,586 +1,470 @@
-
 import React, { useState } from 'react';
-import { Calendar, CalendarIcon, Clock, Plus, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-// Definir tipos
-interface Horario {
+// We need to fix the day type to match "Lunes" | "Martes" | "Miércoles" | "Jueves" | "Viernes" | "Sábado"
+type Day = "Lunes" | "Martes" | "Miércoles" | "Jueves" | "Viernes" | "Sábado";
+
+interface HorarioClase {
   id: number;
+  cursoId: number;
   curso: string;
-  docente: string;
+  aulaId: number;
   aula: string;
-  dia: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado';
+  docenteId: number;
+  docente: string;
+  dia: Day;
   horaInicio: string;
   horaFin: string;
-  grupo: string;
+}
+
+interface Curso {
+  id: number;
+  nombre: string;
+}
+
+interface Aula {
+  id: number;
+  nombre: string;
+}
+
+interface Docente {
+  id: number;
+  nombre: string;
 }
 
 // Esquema de validación
 const horarioSchema = z.object({
-  id: z.number().optional(),
-  curso: z.string().min(3, { message: 'Debe seleccionar un curso' }),
-  docente: z.string().min(3, { message: 'Debe seleccionar un docente' }),
-  aula: z.string().min(2, { message: 'Debe seleccionar un aula' }),
-  dia: z.enum(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']),
-  horaInicio: z.string().min(5, { message: 'Debe especificar la hora de inicio' }),
-  horaFin: z.string().min(5, { message: 'Debe especificar la hora de fin' }),
-  grupo: z.string().min(1, { message: 'Debe especificar el grupo' }),
+  cursoId: z.string().min(1, { message: 'Debe seleccionar un curso' }),
+  aulaId: z.string().min(1, { message: 'Debe seleccionar un aula' }),
+  docenteId: z.string().min(1, { message: 'Debe seleccionar un docente' }),
+  dia: z.string().min(1, { message: 'Debe seleccionar un día' }),
+  horaInicio: z.string().min(5, { message: 'Hora de inicio inválida' }),
+  horaFin: z.string().min(5, { message: 'Hora de fin inválida' }),
 });
 
 type FormValues = z.infer<typeof horarioSchema>;
 
-const diasSemana = [
-  { id: 'Lunes', label: 'Lunes' },
-  { id: 'Martes', label: 'Martes' },
-  { id: 'Miércoles', label: 'Miércoles' },
-  { id: 'Jueves', label: 'Jueves' },
-  { id: 'Viernes', label: 'Viernes' },
-  { id: 'Sábado', label: 'Sábado' },
-];
-
-// Generate hours from 7:00 to 22:00 in 30-minute intervals
-const horasDisponibles = Array.from({ length: 32 }, (_, i) => {
-  const hora = Math.floor(i / 2) + 7; // Starts at 7:00
-  const minutos = i % 2 === 0 ? '00' : '30';
-  return {
-    id: `${hora.toString().padStart(2, '0')}:${minutos}`,
-    label: `${hora}:${minutos}`
-  };
-});
-
-// Generate time slots for the calendar
-const timeSlots = Array.from({ length: 30 }, (_, i) => {
-  const hora = Math.floor(i / 2) + 7; // Starts at 7:00
-  const minutos = i % 2 === 0 ? '00' : '30';
-  return `${hora.toString().padStart(2, '0')}:${minutos}`;
-});
-
 const HorarioManualPage = () => {
-  // State for data
-  const [horarios, setHorarios] = useState<Horario[]>([
+  // Estado para los horarios
+  const [horarios, setHorarios] = useState<HorarioClase[]>([
     { 
       id: 1, 
+      cursoId: 1, 
       curso: 'Algoritmos y Estructuras de Datos', 
+      aulaId: 1, 
+      aula: 'Laboratorio de Computación 1', 
+      docenteId: 1, 
       docente: 'Juan Pérez', 
-      aula: 'A101', 
-      dia: 'Lunes', 
-      horaInicio: '08:00',
-      horaFin: '10:00',
-      grupo: 'A'
+      dia: "Lunes", 
+      horaInicio: '08:00', 
+      horaFin: '10:00' 
     },
     { 
       id: 2, 
+      cursoId: 2, 
       curso: 'Bases de Datos', 
+      aulaId: 2, 
+      aula: 'Aula Teórica 101', 
+      docenteId: 2, 
       docente: 'María Gómez', 
-      aula: 'L201', 
-      dia: 'Miércoles', 
-      horaInicio: '10:00',
-      horaFin: '12:00',
-      grupo: 'B'
-    },
-    { 
-      id: 3, 
-      curso: 'Programación Web', 
-      docente: 'Carlos López', 
-      aula: 'A102', 
-      dia: 'Martes', 
-      horaInicio: '14:00',
-      horaFin: '16:00',
-      grupo: 'A'
-    },
-    { 
-      id: 4, 
-      curso: 'Inteligencia Artificial', 
-      docente: 'Ana Rodríguez', 
-      aula: 'L202', 
-      dia: 'Jueves', 
-      horaInicio: '16:00',
-      horaFin: '18:00',
-      grupo: 'C'
-    },
-    { 
-      id: 5, 
-      curso: 'Bases de Datos Avanzadas', 
-      docente: 'María Gómez', 
-      aula: 'T301', 
-      dia: 'Viernes', 
-      horaInicio: '08:00',
-      horaFin: '10:00',
-      grupo: 'D'
+      dia: "Martes", 
+      horaInicio: '10:00', 
+      horaFin: '12:00' 
     },
   ]);
-  
-  // Form state
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  // Form setup
+  // Estado para los cursos, aulas y docentes (simulados)
+  const [cursos, setCursos] = useState<Curso[]>([
+    { id: 1, nombre: 'Algoritmos y Estructuras de Datos' },
+    { id: 2, nombre: 'Bases de Datos' },
+    { id: 3, nombre: 'Ingeniería de Software' },
+  ]);
+
+  const [aulas, setAulas] = useState<Aula[]>([
+    { id: 1, nombre: 'Laboratorio de Computación 1' },
+    { id: 2, nombre: 'Aula Teórica 101' },
+    { id: 3, nombre: 'Aula Magna' },
+  ]);
+
+  const [docentes, setDocentes] = useState<Docente[]>([
+    { id: 1, nombre: 'Juan Pérez' },
+    { id: 2, nombre: 'María Gómez' },
+    { id: 3, nombre: 'Carlos Rodríguez' },
+  ]);
+
+  // Estado para controlar el formulario
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("horarios");
+
+  // Configuración del formulario
   const form = useForm<FormValues>({
     resolver: zodResolver(horarioSchema),
     defaultValues: {
-      curso: '',
-      docente: '',
-      aula: '',
-      dia: 'Lunes',
-      horaInicio: '',
-      horaFin: '',
-      grupo: '',
+      cursoId: '',
+      aulaId: '',
+      docenteId: '',
+      dia: '',
+      horaInicio: '08:00',
+      horaFin: '10:00',
     },
   });
-  
-  // Handlers
-  const handleAdd = (dia: string = 'Lunes', horaInicio: string = '08:00') => {
+
+  // Manejadores
+  const handleAdd = () => {
     setEditingId(null);
     form.reset({
-      curso: '',
-      docente: '',
-      aula: '',
-      dia,
-      horaInicio,
-      horaFin: '',
-      grupo: '',
+      cursoId: '',
+      aulaId: '',
+      docenteId: '',
+      dia: '',
+      horaInicio: '08:00',
+      horaFin: '10:00',
     });
-    setIsDialogOpen(true);
+    setShowForm(true);
   };
 
-  const handleEdit = (item: Horario) => {
+  const handleEdit = (item: HorarioClase) => {
     setEditingId(item.id);
     form.reset({
-      curso: item.curso,
-      docente: item.docente,
-      aula: item.aula,
+      cursoId: item.cursoId.toString(),
+      aulaId: item.aulaId.toString(),
+      docenteId: item.docenteId.toString(),
       dia: item.dia,
       horaInicio: item.horaInicio,
       horaFin: item.horaFin,
-      grupo: item.grupo,
     });
-    setIsDialogOpen(true);
+    setShowForm(true);
   };
 
-  const handleDelete = (item: Horario) => {
+  const handleDelete = (item: HorarioClase) => {
     setHorarios(horarios.filter(h => h.id !== item.id));
-    toast.success(`Horario eliminado`);
+    toast.success(`Horario de clase eliminado`);
   };
 
-  const handleCellClick = (dia: string, hora: string) => {
-    setSelectedDay(dia);
-    setSelectedTime(hora);
-    handleAdd(dia, hora);
-  };
+  const handleAddHorario = (data: any) => {
+    // Ensure the day is properly typed as Day
+    const día: Day = data.dia as Day;
 
-  const onSubmit = async (data: FormValues) => {
-    setIsSubmitting(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      if (editingId) {
-        // Update existing
-        setHorarios(horarios.map(item => 
-          item.id === editingId ? { ...data, id: editingId } as Horario : item
-        ));
-        toast.success(`Horario actualizado`);
-      } else {
-        // Create new
-        const newItem: Horario = {
-          ...data as Horario,
-          id: Math.max(0, ...horarios.map(h => h.id)) + 1,
-        };
-        setHorarios([...horarios, newItem]);
-        toast.success(`Nuevo horario creado`);
-      }
-      
-      setIsDialogOpen(false);
-      form.reset();
-    } catch (error) {
-      toast.error('Error al guardar el horario');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Sample data for form selects
-  const cursos = ['Algoritmos y Estructuras de Datos', 'Bases de Datos', 'Programación Web', 'Inteligencia Artificial', 'Bases de Datos Avanzadas'];
-  const docentes = ['Juan Pérez', 'María Gómez', 'Carlos López', 'Ana Rodríguez'];
-  const aulas = ['A101', 'A102', 'L201', 'L202', 'T301'];
-
-  // Calculate the position and height of each class block
-  const getClassBlockStyle = (horario: Horario) => {
-    const startIndex = timeSlots.findIndex(time => time === horario.horaInicio);
-    const endIndex = timeSlots.findIndex(time => time === horario.horaFin);
-    
-    if (startIndex === -1 || endIndex === -1) return {};
-    
-    const height = (endIndex - startIndex) * 48; // 48px per 30-minute slot
-    const top = startIndex * 48;
-    
-    return {
-      height: `${height}px`,
-      top: `${top}px`,
+    const newHorario: HorarioClase = {
+      id: Math.max(0, ...horarios.map(h => h.id)) + 1,
+      cursoId: parseInt(data.cursoId),
+      curso: cursos.find(c => c.id === parseInt(data.cursoId))?.nombre || '',
+      aulaId: parseInt(data.aulaId),
+      aula: aulas.find(a => a.id === parseInt(data.aulaId))?.nombre || '',
+      docenteId: parseInt(data.docenteId),
+      docente: docentes.find(d => d.id === parseInt(data.docenteId))?.nombre || '',
+      dia: día,
+      horaInicio: data.horaInicio,
+      horaFin: data.horaFin,
     };
+
+    setHorarios([...horarios, newHorario]);
+    toast.success(`Nuevo horario de clase creado`);
+    setShowForm(false);
+    form.reset();
   };
 
-  // Get a nice color based on the course name (for visual separation)
-  const getClassColor = (curso: string) => {
-    const colors = [
-      'bg-blue-100 border-blue-300 text-blue-800',
-      'bg-green-100 border-green-300 text-green-800',
-      'bg-yellow-100 border-yellow-300 text-yellow-800',
-      'bg-purple-100 border-purple-300 text-purple-800',
-      'bg-pink-100 border-pink-300 text-pink-800',
-    ];
-    
-    // Simple hash function to consistently assign colors
-    let hash = 0;
-    for (let i = 0; i < curso.length; i++) {
-      hash = curso.charCodeAt(i) + ((hash << 5) - hash);
+  const handleUpdateHorario = (data: any) => {
+    if (editingId) {
+      // Ensure the day is properly typed as Day
+      const día: Day = data.dia as Day;
+
+      setHorarios(horarios.map(item => 
+        item.id === editingId ? { 
+          id: editingId, 
+          cursoId: parseInt(data.cursoId),
+          curso: cursos.find(c => c.id === parseInt(data.cursoId))?.nombre || '',
+          aulaId: parseInt(data.aulaId),
+          aula: aulas.find(a => a.id === parseInt(data.aulaId))?.nombre || '',
+          docenteId: parseInt(data.docenteId),
+          docente: docentes.find(d => d.id === parseInt(data.docenteId))?.nombre || '',
+          dia: día,
+          horaInicio: data.horaInicio,
+          horaFin: data.horaFin,
+        } : item
+      ));
+      toast.success(`Horario de clase actualizado`);
     }
-    
-    return colors[Math.abs(hash) % colors.length];
+    setShowForm(false);
+    form.reset();
   };
+
+  const onSubmit = (data: FormValues) => {
+    if (editingId) {
+      handleUpdateHorario(data);
+    } else {
+      handleAddHorario(data);
+    }
+  };
+
+  // Columnas para la tabla
+  const columns = [
+    { header: 'Curso', accessor: 'curso' },
+    { header: 'Aula', accessor: 'aula' },
+    { header: 'Docente', accessor: 'docente' },
+    { header: 'Día', accessor: 'dia' },
+    { header: 'Hora Inicio', accessor: 'horaInicio' },
+    { header: 'Hora Fin', accessor: 'horaFin' },
+  ];
+
+  // Renderizado del formulario
+  const renderForm = (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="cursoId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Curso</FormLabel>
+                <FormControl>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un curso" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cursos.map(curso => (
+                        <SelectItem key={curso.id} value={curso.id.toString()}>
+                          {curso.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="aulaId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Aula</FormLabel>
+                <FormControl>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un aula" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {aulas.map(aula => (
+                        <SelectItem key={aula.id} value={aula.id.toString()}>
+                          {aula.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="docenteId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Docente</FormLabel>
+                <FormControl>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un docente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {docentes.map(docente => (
+                        <SelectItem key={docente.id} value={docente.id.toString()}>
+                          {docente.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="dia"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Día</FormLabel>
+                <FormControl>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un día" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Lunes">Lunes</SelectItem>
+                      <SelectItem value="Martes">Martes</SelectItem>
+                      <SelectItem value="Miércoles">Miércoles</SelectItem>
+                      <SelectItem value="Jueves">Jueves</SelectItem>
+                      <SelectItem value="Viernes">Viernes</SelectItem>
+                      <SelectItem value="Sábado">Sábado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="horaInicio"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Hora Inicio</FormLabel>
+                <FormControl>
+                  {/* You might want to use a time picker component here */}
+                  <input 
+                    type="time" 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="horaFin"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Hora Fin</FormLabel>
+                <FormControl>
+                  {/* You might want to use a time picker component here */}
+                  <input 
+                    type="time"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => setShowForm(false)}
+          >
+            Cancelar
+          </Button>
+          <Button type="submit">
+            {editingId ? 'Actualizar' : 'Crear'}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
 
   return (
-    <div className="container mx-auto">
-      <div className="flex flex-col gap-8">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-3xl font-bold mb-2">Horarios Académicos</h2>
-              <p className="text-muted-foreground">
-                Gestiona los horarios de clases en formato calendario
-              </p>
-            </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => handleAdd()}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Agregar Horario
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>{editingId ? 'Editar' : 'Nuevo'} Horario</DialogTitle>
-                  <DialogDescription>
-                    Complete la información del horario académico
-                  </DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="curso"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Curso</FormLabel>
-                            <FormControl>
-                              <Select 
-                                onValueChange={field.onChange} 
-                                defaultValue={field.value}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleccione un curso" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {cursos.map(curso => (
-                                    <SelectItem key={curso} value={curso}>{curso}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="docente"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Docente</FormLabel>
-                            <FormControl>
-                              <Select 
-                                onValueChange={field.onChange} 
-                                defaultValue={field.value}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleccione un docente" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {docentes.map(docente => (
-                                    <SelectItem key={docente} value={docente}>{docente}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+    <div>
+      <Tabs 
+        defaultValue="horarios" 
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
+        <div className="flex justify-between items-center mb-4">
+          <TabsList>
+            <TabsTrigger value="horarios" disabled={false}>Horarios</TabsTrigger>
+          </TabsList>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="dia"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Día</FormLabel>
-                            <FormControl>
-                              <Select 
-                                onValueChange={field.onChange} 
-                                defaultValue={field.value}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {diasSemana.map(dia => (
-                                    <SelectItem key={dia.id} value={dia.id}>{dia.label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="horaInicio"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Hora Inicio</FormLabel>
-                            <FormControl>
-                              <Select 
-                                onValueChange={field.onChange} 
-                                defaultValue={field.value}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Hora inicio" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {horasDisponibles.map(hora => (
-                                    <SelectItem key={hora.id} value={hora.id}>{hora.label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="horaFin"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Hora Fin</FormLabel>
-                            <FormControl>
-                              <Select 
-                                onValueChange={field.onChange} 
-                                defaultValue={field.value}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Hora fin" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {horasDisponibles
-                                    .filter(hora => hora.id > form.getValues("horaInicio"))
-                                    .map(hora => (
-                                      <SelectItem key={hora.id} value={hora.id}>{hora.label}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+          <Button onClick={handleAdd} className="flex items-center gap-2">
+            <Clock className="h-4 w-4" /> 
+            Agregar Horario
+          </Button>
+        </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="aula"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Aula</FormLabel>
-                            <FormControl>
-                              <Select 
-                                onValueChange={field.onChange} 
-                                defaultValue={field.value}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleccione un aula" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {aulas.map(aula => (
-                                    <SelectItem key={aula} value={aula}>{aula}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="grupo"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Grupo</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Ej: A, B, C..." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </form>
-                </Form>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button 
-                    onClick={form.handleSubmit(onSubmit)} 
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? 'Guardando...' : editingId ? 'Actualizar' : 'Guardar'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </motion.div>
-        
-        <Card>
-          <CardContent className="p-4">
-            {/* Calendar header */}
-            <div className="grid grid-cols-7 mb-2">
-              <div className="col-span-1 text-center font-medium text-muted-foreground">Hora</div>
-              {diasSemana.map(dia => (
-                <div key={dia.id} className="col-span-1 text-center font-medium">{dia.label}</div>
-              ))}
-            </div>
-
-            {/* Calendar body */}
-            <div className="grid grid-cols-7 border rounded-md overflow-hidden">
-              {/* Time slots column */}
-              <div className="col-span-1 bg-muted/30">
-                {timeSlots.map((time, index) => (
-                  <div 
-                    key={`time-${index}`} 
-                    className={`h-12 border-b flex items-center justify-center px-2 text-sm ${index % 2 === 0 ? 'bg-muted/10' : ''}`}
-                  >
-                    <span className="text-muted-foreground">{time}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Days columns */}
-              {diasSemana.map(dia => (
-                <div key={`col-${dia.id}`} className="col-span-1 relative border-l">
-                  {/* Time slots for this day */}
-                  {timeSlots.map((time, index) => (
-                    <div 
-                      key={`slot-${dia.id}-${index}`}
-                      className={`h-12 border-b ${index % 2 === 0 ? 'bg-muted/10' : ''} hover:bg-muted/20 cursor-pointer`}
-                      onClick={() => handleCellClick(dia.id, time)}
-                    ></div>
-                  ))}
-
-                  {/* Class blocks */}
-                  {horarios
-                    .filter(h => h.dia === dia.id)
-                    .map(horario => (
-                      <div
-                        key={`class-${horario.id}`}
-                        className={`absolute left-0 right-0 rounded border-l-4 p-1 mx-1 overflow-hidden ${getClassColor(horario.curso)}`}
-                        style={getClassBlockStyle(horario)}
-                      >
-                        <div className="flex justify-between items-start mb-1">
-                          <div className="text-xs font-bold truncate">{horario.curso}</div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 rounded-full p-0 hover:bg-background/20"
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              handleDelete(horario);
-                            }}
+        <TabsContent value="horarios">
+          {/* Table to display horarios */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Horarios de Clase</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {columns.map((column, index) => (
+                      <TableHead key={index}>{column.header}</TableHead>
+                    ))}
+                    <TableHead>Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {horarios.map((horario) => (
+                    <TableRow key={horario.id}>
+                      {columns.map((column, index) => (
+                        <TableCell key={index}>
+                          {horario[column.accessor as keyof HorarioClase]}
+                        </TableCell>
+                      ))}
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleEdit(horario)}
                           >
-                            <Trash2 className="h-3 w-3" />
+                            Editar
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            onClick={() => handleDelete(horario)}
+                          >
+                            Eliminar
                           </Button>
                         </div>
-                        <div className="text-xs flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{horario.horaInicio} - {horario.horaFin}</span>
-                        </div>
-                        <div className="text-xs">Aula: {horario.aula}</div>
-                        <div className="text-xs truncate">Prof: {horario.docente}</div>
-                        <div className="text-xs">Grupo: {horario.grupo}</div>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs p-0 h-6 mt-1 hover:bg-background/20 w-full text-left"
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            handleEdit(horario);
-                          }}
-                        >
-                          Editar
-                        </Button>
-                      </div>
-                    ))
-                  }
-                </div>
-              ))}
-            </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {showForm && (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>{editingId ? 'Editar Horario' : 'Agregar Horario'}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {renderForm}
           </CardContent>
         </Card>
-      </div>
+      )}
     </div>
   );
 };

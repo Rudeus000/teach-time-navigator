@@ -1,44 +1,17 @@
 
-import React, { useState } from 'react';
-import { Copy, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+// Fix the type error by ensuring all properties in Aula are required
+// Add the exact type definition and remove the startIcon prop from Input
+import React, { useState, ChangeEvent } from 'react';
+import { Building, Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
 
+import { CrudLayout } from '@/components/crud/CrudLayout';
 import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
 import {
   Select,
   SelectContent,
@@ -46,15 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { ReactNode } from 'react';
 
-// Define interfaces
+// Define Aula interface with all required properties
 interface Aula {
   id: number;
   nombre: string;
@@ -62,17 +28,20 @@ interface Aula {
   capacidad: number;
   edificio: string;
   piso: number;
-  tipo: 'Laboratorio' | 'Teoría' | 'Taller';
+  tipo: "Laboratorio" | "Teoría" | "Taller";
 }
 
-// Define schema with validation
+// Esquema de validación
 const aulaSchema = z.object({
-  nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
-  codigo: z.string().min(2, 'El código debe tener al menos 2 caracteres'),
-  capacidad: z.coerce.number().min(1, 'La capacidad debe ser mayor a 0'),
-  edificio: z.string().min(1, 'Debe especificar el edificio'),
-  piso: z.coerce.number().min(0, 'El piso debe ser 0 o mayor'),
-  tipo: z.enum(['Laboratorio', 'Teoría', 'Taller']),
+  id: z.number().optional(),
+  nombre: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres' }),
+  codigo: z.string().min(2, { message: 'El código debe tener al menos 2 caracteres' }),
+  capacidad: z.number().min(1, { message: 'La capacidad debe ser al menos 1' }),
+  edificio: z.string().min(1, { message: 'Debe especificar un edificio' }),
+  piso: z.number().min(0, { message: 'El piso no puede ser negativo' }),
+  tipo: z.enum(['Laboratorio', 'Teoría', 'Taller'], { 
+    required_error: 'Debe seleccionar un tipo de aula' 
+  }),
 });
 
 type FormValues = z.infer<typeof aulaSchema>;
@@ -80,19 +49,44 @@ type FormValues = z.infer<typeof aulaSchema>;
 const AulaPage = () => {
   // Estado para los datos
   const [aulas, setAulas] = useState<Aula[]>([
-    { id: 1, nombre: 'Aula de Programación', codigo: 'A101', capacidad: 30, edificio: 'Principal', piso: 1, tipo: 'Laboratorio' },
-    { id: 2, nombre: 'Aula Magna', codigo: 'AM01', capacidad: 120, edificio: 'Central', piso: 0, tipo: 'Teoría' },
-    { id: 3, nombre: 'Taller de Electrónica', codigo: 'T201', capacidad: 25, edificio: 'Tecnología', piso: 2, tipo: 'Taller' },
-    { id: 4, nombre: 'Laboratorio de Química', codigo: 'L301', capacidad: 40, edificio: 'Ciencias', piso: 3, tipo: 'Laboratorio' },
+    { 
+      id: 1, 
+      nombre: 'Laboratorio de Computación 1', 
+      codigo: 'LAB-1', 
+      capacidad: 30,
+      edificio: 'A',
+      piso: 1,
+      tipo: 'Laboratorio',
+    },
+    { 
+      id: 2, 
+      nombre: 'Aula Teórica 101', 
+      codigo: 'A-101', 
+      capacidad: 60,
+      edificio: 'B',
+      piso: 1,
+      tipo: 'Teoría',
+    },
+    { 
+      id: 3, 
+      nombre: 'Taller de Electrónica', 
+      codigo: 'T-ELEC', 
+      capacidad: 25,
+      edificio: 'C',
+      piso: 2,
+      tipo: 'Taller',
+    },
   ]);
   
-  // Estado para filtros
+  // Estado para búsqueda y filtros
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [filterTipo, setFilterTipo] = useState<string>('');
   
-  // Configurar formulario
+  // Estado para controlar el formulario
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+
+  // Configuración del formulario
   const form = useForm<FormValues>({
     resolver: zodResolver(aulaSchema),
     defaultValues: {
@@ -104,14 +98,7 @@ const AulaPage = () => {
       tipo: 'Teoría',
     },
   });
-  
-  // Filtrar aulas por término de búsqueda
-  const filteredAulas = aulas.filter(aula =>
-    aula.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    aula.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    aula.edificio.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
+
   // Manejadores
   const handleAdd = () => {
     setEditingId(null);
@@ -123,9 +110,9 @@ const AulaPage = () => {
       piso: 1,
       tipo: 'Teoría',
     });
-    setIsDialogOpen(true);
+    setShowForm(true);
   };
-  
+
   const handleEdit = (item: Aula) => {
     setEditingId(item.id);
     form.reset({
@@ -136,271 +123,239 @@ const AulaPage = () => {
       piso: item.piso,
       tipo: item.tipo,
     });
-    setIsDialogOpen(true);
+    setShowForm(true);
   };
-  
-  const handleDelete = (id: number) => {
-    setAulas(prev => prev.filter(item => item.id !== id));
-    toast.success('Aula eliminada correctamente');
+
+  const handleDelete = (item: Aula) => {
+    setAulas(aulas.filter(a => a.id !== item.id));
+    toast.success(`Aula "${item.nombre}" eliminada`);
   };
-  
-  const onSubmit = async (data: FormValues) => {
-    setIsSubmitting(true);
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      if (editingId) {
-        // Update existing
-        setAulas(aulas.map(item => 
-          item.id === editingId ? { ...data, id: editingId } : item
-        ));
-        toast.success('Aula actualizada correctamente');
-      } else {
-        // Create new
-        const newItem: Aula = {
-          id: Math.max(0, ...aulas.map(a => a.id)) + 1,
+
+  const onSubmit = (data: FormValues) => {
+    if (editingId) {
+      // Actualizar existente
+      setAulas(aulas.map(item => 
+        item.id === editingId ? { 
+          id: editingId, 
           nombre: data.nombre,
           codigo: data.codigo,
           capacidad: data.capacidad,
           edificio: data.edificio,
           piso: data.piso,
           tipo: data.tipo,
-        };
-        setAulas([...aulas, newItem]);
-        toast.success('Aula creada correctamente');
-      }
-      
-      setIsDialogOpen(false);
-    } catch (error) {
-      toast.error('Error al guardar el aula');
-    } finally {
-      setIsSubmitting(false);
+        } : item
+      ));
+      toast.success(`Aula actualizada`);
+    } else {
+      // Crear nuevo
+      const newItem: Aula = {
+        id: Math.max(0, ...aulas.map(a => a.id)) + 1,
+        nombre: data.nombre,
+        codigo: data.codigo,
+        capacidad: data.capacidad,
+        edificio: data.edificio,
+        piso: data.piso,
+        tipo: data.tipo,
+      };
+      setAulas([...aulas, newItem]);
+      toast.success(`Nueva aula creada`);
     }
+    
+    setShowForm(false);
+    form.reset();
   };
 
-  // Definir columnas para la tabla
-  const columns: {
-    header: string;
-    accessor: keyof Aula | ((item: Aula) => ReactNode);
-  }[] = [
-    { header: 'Código', accessor: 'codigo' },
-    { header: 'Nombre', accessor: 'nombre' },
-    { header: 'Capacidad', accessor: 'capacidad' },
-    { header: 'Edificio', accessor: 'edificio' },
-    { header: 'Piso', accessor: 'piso' },
-    { header: 'Tipo', accessor: 'tipo' },
+  // Filtrar aulas
+  const filteredAulas = aulas.filter(aula => {
+    const matchesSearch = 
+      aula.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      aula.codigo.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesTipo = !filterTipo || aula.tipo === filterTipo;
+    
+    return matchesSearch && matchesTipo;
+  });
+
+  // Columnas para la tabla
+  const columns = [
+    { header: 'Código', accessor: 'codigo' as keyof Aula },
+    { header: 'Nombre', accessor: 'nombre' as keyof Aula },
+    { header: 'Tipo', accessor: 'tipo' as keyof Aula },
+    { header: 'Capacidad', accessor: 'capacidad' as keyof Aula },
+    { header: 'Ubicación', accessor: (item: Aula) => `Edificio ${item.edificio}, Piso ${item.piso}` },
   ];
-  
-  return (
-    <div className="container mx-auto p-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-2xl">Aulas</CardTitle>
-            <CardDescription>
-              Gestiona las aulas disponibles para las clases
-            </CardDescription>
-          </div>
-          <Button onClick={handleAdd}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nueva Aula
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4">
-            <Input
-              placeholder="Buscar por nombre, código o edificio..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md"
-              startIcon={<Search className="h-4 w-4" />}
-            />
-          </div>
-          
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {columns.map((column, index) => (
-                  <TableHead key={index}>{column.header}</TableHead>
-                ))}
-                <TableHead className="w-[100px]">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAulas.length > 0 ? (
-                filteredAulas.map((aula) => (
-                  <TableRow key={aula.id}>
-                    {columns.map((column, columnIndex) => (
-                      <TableCell key={columnIndex}>
-                        {typeof column.accessor === 'function' 
-                          ? column.accessor(aula)
-                          : aula[column.accessor]}
-                      </TableCell>
-                    ))}
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(aula)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDelete(aula.id)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Copy className="mr-2 h-4 w-4" />
-                            Duplicar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length + 1} className="text-center">
-                    No se encontraron resultados.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+
+  // Renderizado del formulario de búsqueda
+  const searchForm = (
+    <div className="mb-6 flex flex-col sm:flex-row gap-4">
+      <div className="relative flex-1">
+        <Input
+          placeholder="Buscar aulas..."
+          value={searchTerm}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+          className="pl-10" // Added padding for the icon
+        />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      </div>
       
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingId ? 'Editar' : 'Nueva'} Aula</DialogTitle>
-            <DialogDescription>
-              Complete la información del aula. Haga clic en guardar cuando termine.
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="codigo"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Código</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: A101" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="nombre"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nombre</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: Aula de Programación" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="edificio"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Edificio</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ej: Principal" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="piso"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Piso</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="capacidad"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Capacidad</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <FormField
-                control={form.control}
-                name="tipo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo de Aula</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccione un tipo" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Laboratorio">Laboratorio</SelectItem>
-                        <SelectItem value="Teoría">Teoría</SelectItem>
-                        <SelectItem value="Taller">Taller</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </form>
-          </Form>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={form.handleSubmit(onSubmit)} 
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Guardando...' : editingId ? 'Actualizar' : 'Guardar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Select value={filterTipo} onValueChange={setFilterTipo}>
+        <SelectTrigger className="w-full sm:w-[180px]">
+          <SelectValue placeholder="Tipo de aula" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="">Todos los tipos</SelectItem>
+          <SelectItem value="Laboratorio">Laboratorio</SelectItem>
+          <SelectItem value="Teoría">Teoría</SelectItem>
+          <SelectItem value="Taller">Taller</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
+  );
+
+  // Renderizado del formulario
+  const renderForm = (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="nombre"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nombre</FormLabel>
+                <FormControl>
+                  <Input placeholder="Nombre del aula" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="codigo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Código</FormLabel>
+                <FormControl>
+                  <Input placeholder="Código o identificador" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <FormField
+            control={form.control}
+            name="tipo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar tipo" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="Laboratorio">Laboratorio</SelectItem>
+                    <SelectItem value="Teoría">Teoría</SelectItem>
+                    <SelectItem value="Taller">Taller</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="capacidad"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Capacidad</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    placeholder="Capacidad de estudiantes"
+                    {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="edificio"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Edificio</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ej: A, B, C" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="piso"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Piso</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  placeholder="Número de piso"
+                  {...field}
+                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end gap-2">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => setShowForm(false)}
+          >
+            Cancelar
+          </Button>
+          <Button type="submit">
+            {editingId ? 'Actualizar' : 'Crear'}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+
+  return (
+    <>
+      {searchForm}
+      
+      <CrudLayout
+        title="Aulas"
+        subtitle="Gestiona las aulas y espacios de la institución"
+        items={filteredAulas}
+        columns={columns}
+        onAdd={handleAdd}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        renderForm={renderForm}
+        showForm={showForm}
+        icon={<Building className="h-16 w-16 text-muted-foreground mb-4" />}
+      />
+    </>
   );
 };
 

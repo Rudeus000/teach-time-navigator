@@ -18,6 +18,7 @@ interface CrudProps<T> {
   showForm: boolean;
   icon: React.ReactNode;
   readOnly?: boolean;
+  onItemClick?: (item: T) => void;
 }
 
 export function CrudLayout<T extends { id: number | string }>({
@@ -31,7 +32,8 @@ export function CrudLayout<T extends { id: number | string }>({
   renderForm,
   showForm,
   icon,
-  readOnly = false
+  readOnly = false,
+  onItemClick
 }: CrudProps<T>) {
   return (
     <motion.div
@@ -74,7 +76,11 @@ export function CrudLayout<T extends { id: number | string }>({
             </TableHeader>
             <TableBody>
               {items.map((item) => (
-                <TableRow key={item.id}>
+                <TableRow 
+                  key={item.id} 
+                  className={onItemClick ? "cursor-pointer hover:bg-muted/50" : ""}
+                  onClick={onItemClick ? () => onItemClick(item) : undefined}
+                >
                   {columns.map((column, index) => (
                     <TableCell key={index}>
                       {typeof column.accessor === 'function' 
@@ -83,19 +89,25 @@ export function CrudLayout<T extends { id: number | string }>({
                     </TableCell>
                   ))}
                   {!readOnly && (
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-2">
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          onClick={() => onEdit(item)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(item);
+                          }}
                         >
                           Editar
                         </Button>
                         <Button 
                           variant="destructive" 
                           size="sm" 
-                          onClick={() => onDelete(item)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(item);
+                          }}
                         >
                           Eliminar
                         </Button>

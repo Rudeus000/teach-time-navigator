@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown, ChevronUp } from "lucide-react"
@@ -29,6 +30,21 @@ const SelectTrigger = React.forwardRef<
   </SelectPrimitive.Trigger>
 ))
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
+
+const SelectSearchInput = React.forwardRef<
+  HTMLInputElement, 
+  React.InputHTMLAttributes<HTMLInputElement>
+>(({ className, ...props }, ref) => (
+  <input
+    ref={ref}
+    className={cn(
+      "flex w-full rounded-md border-0 bg-transparent py-1.5 px-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+      className
+    )}
+    {...props}
+  />
+))
+SelectSearchInput.displayName = "SelectSearchInput"
 
 const SelectScrollUpButton = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
@@ -67,8 +83,11 @@ SelectScrollDownButton.displayName =
 
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = "popper", ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> & {
+    searchValue?: string;
+    onSearch?: (value: string) => void;
+  }
+>(({ className, children, position = "popper", searchValue, onSearch, ...props }, ref) => (
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       ref={ref}
@@ -82,6 +101,15 @@ const SelectContent = React.forwardRef<
       {...props}
     >
       <SelectScrollUpButton />
+      {onSearch && (
+        <div className="p-1 border-b">
+          <SelectSearchInput 
+            placeholder="Buscar..."
+            value={searchValue}
+            onChange={(e) => onSearch(e.target.value)}
+          />
+        </div>
+      )}
       <SelectPrimitive.Viewport
         className={cn(
           "p-1",
@@ -155,4 +183,5 @@ export {
   SelectSeparator,
   SelectScrollUpButton,
   SelectScrollDownButton,
+  SelectSearchInput,
 }
