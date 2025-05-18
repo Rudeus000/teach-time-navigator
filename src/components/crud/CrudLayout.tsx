@@ -19,6 +19,7 @@ interface CrudProps<T> {
   icon: React.ReactNode;
   readOnly?: boolean;
   onItemClick?: (item: T) => void;
+  formWidth?: "default" | "wide" | "full";
 }
 
 export function CrudLayout<T extends { id: number | string }>({
@@ -33,8 +34,16 @@ export function CrudLayout<T extends { id: number | string }>({
   showForm,
   icon,
   readOnly = false,
-  onItemClick
+  onItemClick,
+  formWidth = "default"
 }: CrudProps<T>) {
+  // Calculate the form width class based on the prop
+  const formWidthClass = formWidth === "full" 
+    ? "w-full" 
+    : formWidth === "wide" 
+      ? "max-w-4xl" 
+      : "max-w-2xl";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -56,7 +65,7 @@ export function CrudLayout<T extends { id: number | string }>({
       </div>
 
       {showForm && (
-        <Card className="mb-8">
+        <Card className={`mb-8 ${formWidthClass} mx-auto`}>
           <CardContent className="pt-6">
             {renderForm}
           </CardContent>
