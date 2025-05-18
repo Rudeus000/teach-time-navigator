@@ -1,92 +1,143 @@
 
 // API models that reflect Django backend structure
 
+// UnidadAcademica model
+export interface UnidadAcademica {
+  unidad_id: number;
+  nombre_unidad: string;
+  descripcion?: string;
+}
+
+// Carrera model
+export interface Carrera {
+  carrera_id: number;
+  nombre_carrera: string;
+  codigo_carrera?: string;
+  horas_totales_curricula?: number;
+  unidad: number; // Foreign key to UnidadAcademica
+  unidad_nombre?: string; // Added from serializer
+}
+
 // PeriodoAcademico model
 export interface PeriodoAcademico {
-  id: number;
+  periodo_id: number;
   nombre_periodo: string;
   fecha_inicio: string;
   fecha_fin: string;
   activo: boolean;
 }
 
-// Unidad Académica model
-export interface UnidadAcademica {
-  id: number;
-  nombre: string;
-  codigo: string;
+// TiposEspacio model
+export interface TipoEspacio {
+  tipo_espacio_id: number;
+  nombre_tipo_espacio: string;
   descripcion?: string;
-}
-
-// Carrera model
-export interface Carrera {
-  id: number;
-  nombre: string;
-  codigo: string;
-  descripcion?: string;
-  unidad_academica: number; // Foreign key to UnidadAcademica
-  unidadAcademica?: UnidadAcademica; // Object relationship (frontend)
-}
-
-// Especialidad model
-export interface Especialidad {
-  id: number;
-  nombre: string;
-  codigo: string;
-  descripcion: string;
-  area: string;
-}
-
-// Docente model
-export interface Docente {
-  id: number;
-  nombres: string;
-  apellidos: string;
-  email: string;
-  telefono: string;
-  estado: 'Activo' | 'Inactivo';
-  especialidades?: Especialidad[]; // Many-to-many relationship
-}
-
-// Materia/Curso model
-export interface Curso {
-  id: number;
-  nombre: string;
-  codigo: string;
-  descripcion: string;
-  creditos: number;
-  horas_teoricas: number;
-  horas_practicas: number;
-  carrera: number; // Foreign key to Carrera
-  carreraObj?: Carrera; // Object relationship (frontend)
-  especialidades?: Especialidad[]; // Many-to-many relationship
 }
 
 // EspaciosFisicos/Aula model
 export interface Aula {
-  id: number;
-  nombre: string;
-  codigo: string;
-  capacidad: number;
-  tipo: string;
-  edificio: string;
-  piso: number;
-  disponible: boolean;
+  espacio_id: number;
+  nombre_espacio: string;
+  tipo_espacio: number;
+  tipo_espacio_nombre?: string;
+  capacidad?: number;
+  ubicacion?: string;
+  recursos_adicionales?: string;
+  unidad?: number;
+  unidad_nombre?: string;
 }
 
-// Grupo model from Django
+// Especialidades model
+export interface Especialidad {
+  especialidad_id: number;
+  nombre_especialidad: string;
+  descripcion?: string;
+}
+
+// Materias/Curso model
+export interface Curso {
+  materia_id: number;
+  codigo_materia: string;
+  nombre_materia: string;
+  descripcion?: string;
+  horas_academicas_teoricas: number;
+  horas_academicas_practicas: number;
+  horas_academicas_laboratorio: number;
+  horas_totales?: number; // Read-only computed field
+  requiere_tipo_espacio_especifico?: number;
+  requiere_tipo_espacio_nombre?: string;
+  estado: boolean;
+  especialidades?: Especialidad[]; // Many-to-many relationship
+}
+
+// CarreraMaterias model
+export interface CarreraMateria {
+  id: number;
+  carrera: number;
+  carrera_nombre?: string;
+  materia: number;
+  materia_nombre?: string;
+  materia_codigo?: string;
+  ciclo_sugerido?: number;
+}
+
+// MateriaEspecialidadesRequeridas model
+export interface MateriaEspecialidadRequerida {
+  id: number;
+  materia: number;
+  materia_nombre?: string;
+  especialidad: number;
+  especialidad_nombre?: string;
+}
+
+// Roles model
+export interface Rol {
+  rol_id: number;
+  nombre_rol: string;
+}
+
+// Docente model
+export interface Docente {
+  docente_id: number;
+  usuario?: number;
+  usuario_username?: string;
+  codigo_docente?: string;
+  nombres: string;
+  apellidos: string;
+  dni?: string;
+  email: string;
+  telefono: string;
+  tipo_contrato?: string;
+  max_horas_semanales?: number;
+  unidad_principal?: number;
+  unidad_principal_nombre?: string;
+  especialidades?: Especialidad[]; // Many-to-many relationship
+  especialidades_detalle?: Especialidad[]; // Serialized version
+  estado?: 'Activo' | 'Inactivo'; // Not in the model but might be useful
+}
+
+// DocenteEspecialidades model
+export interface DocenteEspecialidad {
+  docente: number;
+  especialidad: number;
+  especialidad_id?: number;
+  nombre_especialidad?: string;
+}
+
+// Grupo model
 export interface Grupo {
   grupo_id: number;
   codigo_grupo: string;
-  materia: number; // Foreign key
-  materiaObj?: Curso; // Object relationship (frontend)
+  materia: number;
   carrera: number;
-  carreraObj?: Carrera;
   periodo: number;
-  periodoObj?: PeriodoAcademico;
   numero_estudiantes_estimado?: number;
   turno_preferente?: 'M' | 'T' | 'N';
   docente_asignado_directamente?: number;
+  // Additional frontend properties
+  materiaObj?: Curso;
+  carreraObj?: Carrera;
+  periodoObj?: PeriodoAcademico;
   docenteObj?: Docente;
 }
 
@@ -103,33 +154,35 @@ export interface BloqueHorario {
 // DisponibilidadDocentes model
 export interface DisponibilidadDocente {
   disponibilidad_id: number;
-  docente: number; // Foreign key
-  docenteObj?: Docente;
+  docente: number;
   periodo: number;
-  periodoObj?: PeriodoAcademico;
   dia_semana: number;
   bloque_horario: number;
-  bloqueObj?: BloqueHorario;
   esta_disponible: boolean;
   preferencia: number; // 0=Neutral, 1=Preferred, -1=Not preferred
+  // Additional frontend properties
+  docenteObj?: Docente;
+  periodoObj?: PeriodoAcademico;
+  bloqueObj?: BloqueHorario;
 }
 
 // HorariosAsignados model
 export interface HorarioAsignado {
   horario_id: number;
-  grupo: number; // Foreign key
-  grupoObj?: Grupo;
+  grupo: number;
   docente: number;
-  docenteObj?: Docente;
   espacio: number;
-  espacioObj?: Aula;
   periodo: number;
-  periodoObj?: PeriodoAcademico;
   dia_semana: number;
   bloque_horario: number;
-  bloqueObj?: BloqueHorario;
   estado: 'Programado' | 'Confirmado' | 'Cancelado';
   observaciones?: string;
+  // Additional frontend properties
+  grupoObj?: Grupo;
+  docenteObj?: Docente;
+  espacioObj?: Aula;
+  periodoObj?: PeriodoAcademico;
+  bloqueObj?: BloqueHorario;
 }
 
 // ConfiguracionRestricciones model
@@ -157,4 +210,21 @@ export interface HorarioGenerado {
   aulas: number;
   periodo: PeriodoAcademico;
   horarios?: HorarioAsignado[];
+}
+
+// User model for authentication
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_staff: boolean;
+  is_active: boolean;
+  groups: Group[];
+}
+
+export interface Group {
+  id: number;
+  name: string;
 }
