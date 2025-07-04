@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import axios from '@/lib/axios';
 
 import { Docente, DisponibilidadDocente, BloqueHorario, PeriodoAcademico } from '@/models/api';
 import DisponibilidadService from '@/services/DisponibilidadService';
@@ -42,12 +43,14 @@ const DisponibilidadDocentesPage = () => {
   } = useQuery({
     queryKey: ['periodos-academicos'],
     queryFn: DisponibilidadService.getPeriodosActivos,
-    onSuccess: (data) => {
-      if (data.length > 0 && !selectedPeriodo) {
-        setSelectedPeriodo(data[0].periodo_id);
-      }
-    }
   });
+
+  // Set first period as selected when periods are loaded
+  useEffect(() => {
+    if (periodos.length > 0 && !selectedPeriodo) {
+      setSelectedPeriodo(periodos[0].periodo_id);
+    }
+  }, [periodos, selectedPeriodo]);
 
   // Obtener bloques horarios
   const { 
@@ -58,7 +61,7 @@ const DisponibilidadDocentesPage = () => {
     queryFn: DisponibilidadService.getBloqueHorarios,
   });
   
-  // Consulta para obtener docentes (simulado hasta que se conecte al backend real)
+  // Consulta para obtener docentes
   const { 
     data: docentes = [],
     isLoading: isLoadingDocentes 
